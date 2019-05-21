@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>hover</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .wrapper {
+            width: 500px;
+            height: 100%;
+            /* background-image: url(./img/background.png); */
+            background: url('C:/Users/17809203406/Desktop/img/background.png');
+            background-size: 100% 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+            color: #fff;
+            position: relative;
+
+        }
+
+        .scoreArea div {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .imgArea {
+            width: 500px;
+            height: 500px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="scoreArea">
+            <div class="target">目标分数: <span id="target"></span> </div>
+            <div class="currentScore">当前分数: <span id='totalScore'>0</span>分 </div>
+            <div> <span class="blockNum">0</span>块 <span class="slectedScore">0</span>分 </div>
+        </div>
+        <div class="imgArea"></div>
+    </div>
+</body>
+<script>
+    const config = {
+        imgArea: document.getElementsByClassName('imgArea')[0],
+        blockNum: document.getElementsByClassName("blockNum")[0],
+        slectedScore: document.getElementsByClassName("slectedScore")[0],
+        targetScoreEle: document.getElementsByClassName('target')[0],
+        currentScoreEle: document.getElementsByClassName('currentScore')[0],
+
+        targetScore: 1500, //本轮目标1500分
+
+
+        colum: 10,
+        row: 10,
+        blockAreaWidth: 500,
+        blockAreaHeight: 500,
+        colorSet: ['./img/0.png', './img/1.png', './img/2.png', './img/3.png', './img/4.png']
+    }
+
+
+    init()
+
+    function init() {
+        // 添加config属性(计算得出的)
+        config.blockWidth = config.imgArea.offsetWidth / config.colum;
+        config.blockHeight = config.imgArea.offsetHeight / config.row;
+        //生成数组
+        config.blockArr = createBlockArr();
+        config.currentArr = [];//当前选中的
+        config.lastArr = [];//上一次选中的
+
+        document.getElementById('target').innerText = config.targetScore;
+        createBlock();
+//完善:1 被消灭的星星逐个消失;2:加上音乐
+
+    }
+
+    function createBlockArr() {
+        const blockArr = []
+        for (var i = 0; i < config.row; i++) {
+            var arr = [];
+            blockArr.push(arr);
+        }
+        return blockArr;
+    }
+    function findSameColor(block, arr) {
+        // debugger;
+        const left = block.left;
+        const bottom = block.bottom;
+        // console.log(left,bottom);
+        //寻找config.blockArr里的符合条件的block
+        //左
+        if (config.blockArr[left - 1] && config.blockArr[left - 1][bottom] && config.blockArr[left - 1][bottom].num == block.num && arr.indexOf(config.blockArr[left - 1][bottom]) == -1) {
+            arr.push(config.blockArr[left - 1][bottom]);
+            findSameColor(config.blockArr[left - 1][bottom], arr)
+        }
+        //上
+        if (config.blockArr[left] && config.blockArr[left][bottom + 1] && config.blockArr[left][bottom + 1].num == block.num && arr.indexOf(config.blockArr[left][bottom + 1]) == -1) {
+            arr.push(config.blockArr[left][bottom + 1]);
+            findSameColor(config.blockArr[left][bottom + 1], arr)
+        }
+        //下
+        if (config.blockArr[left] && config.blockArr[left][bottom - 1] && config.blockArr[left][bottom - 1].num == block.num && arr.indexOf(config.blockArr[left][bottom - 1]) == -1) {
+            arr.push(config.blockArr[left][bottom - 1]);
+            findSameColor(config.blockArr[left][bottom - 1], arr)
+        }
+        //右
+        if (config.blockArr[left + 1] && config.blockArr[left + 1][bottom] && config.blockArr[left + 1][bottom].num == block.num && arr.indexOf(config.blockArr[left + 1][bottom]) == -1) {
+            arr.push(config.blockArr[left + 1][bottom]);
+            findSameColor(config.blockArr[left + 1][bottom], arr)
+        }
+    }
+
+    function createBlock() {
+        const fragement = document.createDocumentFragment();
+        for (let i = 0, len = config.row; i < len; i++) {
+            for (let j = 0, len1 = config.colum; j < len1; j++) {
+                const block = document.createElement('div');
+                block.style.height = config.blockHeight + 'px';
+                block.style.width = config.blockWidth + 'px';
+                block.style.position = 'absolute';
+                block.style.backgroundSize = '100% 100%';
+                block.style.boxSizing = 'border-box';
+                block.style.border = '0px solid #fff'
+                block.style.borderRadius = '10px';
+                block.style.transform = 'scale(0.95)'
+                //记录个性
+                block.left = i;
+                block.bottom = j;
+                block.num = Math.floor(Math.random() * 5);
+
+                //改变这些的样式
+                setTyle(block);
+                //挂到config上作为一个二维数组的元素
+                config.blockArr[block.left][block.bottom] = block;
+                block.onmouseenter = function () {
+                    if (config.lastArr.length > 1) {  //把上一次的都还原,并且把新选中的赋值给lastArr
+                        goBack(config.lastArr);
+                    }
+                    //寻找到相同颜色的
+                    config.currentArr = [];
+                    config.currentArr.push(this);
+                    findSameColor(this, config.currentArr);
+                    //变了后附上值给lastArr
+                    config.lastArr = config.currentArr;
+                    //改变样式
+                    if (config.currentArr.length > 1) {
+                        changeStyle(config.currentArr);
+                        showScore(config.currentArr);
+                        // 显示分数
+                    } else {
+                        config.blockNum.innerText = 0;
+                        config.slectedScore.innerText = 0;
+                    }
+                }
+                block.onclick = function () {
+                    if (config.currentArr.length > 1) {
+                        //让所有的当前数组内的元素消失;
+                        //config.block修改数据  变成null 确定是不是某列是空数组,是的话,删除这列空数组,并且让后面的
+                        setDispprearBlock(config.currentArr);
+                        //重新设置样式
+                        refreshDom();
+                        //计算分数
+                        addScore()
+                        if (!checkSameSibling()) {//判断是否还剩可供点击相邻的;
+                            if (config.totalScore > config.targetScore) {
+                                setTimeout(() => {
+                                    alert('恭喜过关')
+                                }, 500);
+                                
+                            }else{
+                                setTimeout(() => {
+                                    alert('没过关')
+                                }, 500);
+                            }
+                        };
+                    }
+                }
+                fragement.appendChild(block);
+            }
+        }
+        config.imgArea.appendChild(fragement)
+    }
+    function checkSameSibling() {
+        for (let i = 0, len = config.blockArr.length; i < len; i++) {
+            for (let j = 0, len1 = config.blockArr[i].length; j < len1; j++) {
+                const num = config.blockArr[i][j].num;
+                // debugger
+                if (config.blockArr[i][j + 1] && config.blockArr[i][j + 1].num == num) {//判断上
+                    return true;
+                }
+                if (config.blockArr[i][j - 1] && config.blockArr[i][j - 1].num == num) {//判断下
+                    return true;
+                }
+                if (config.blockArr[i - 1] && config.blockArr[i - 1][j] && config.blockArr[i-1][j].num == num) {//判断下
+                    return true;
+                }
+                if (config.blockArr[i + 1] && config.blockArr[i + 1][j] && config.blockArr[i + 1][j].num == num) {//判断下
+                    return true;
+                }
+            }
+        }
+        return false
+    }
+
+
+    function addScore() {
+        const totalScore = document.getElementById('totalScore');
+        config.totalScore = parseInt(totalScore.innerText) + config.selectedScore
+        totalScore.innerText = config.totalScore;
+    }
+
+
+    function setDispprearBlock(arr) {
+        for (let i = 0; i < arr.length; i++) {
+            const left = arr[i].left;
+            const bottom = arr[i].bottom;
+            config.blockArr[left][bottom].style.display = 'none';
+            //将config.block的上对应的值设置为none;
+            
+            config.blockArr[left][bottom] = null;
+        }
+        dropBlock();
+
+    }
+    function dropBlock() {
+        let newBlockArr = []
+
+        for (let i = 0, len = config.blockArr.length; i < len; i++) {//每一列都如此移动
+            let pointer = 0;//记录一个指针
+            newBlockArr.push([]);
+            for (let j = 0, len1 = config.blockArr[i].length; j < len1; j++) {//每一列下的每个元素都如此移动
+                if (config.blockArr[i][j] != null) {
+                    newBlockArr[i][pointer] = config.blockArr[i][j];
+                    newBlockArr[i][pointer].left = i;
+                    newBlockArr[i][pointer].bottom = pointer;
+                    pointer++;
+                }
+            }
+        }
+        config.blockArr = newBlockArr;
+        spliceNullColum()//去除空列
+    }
+
+    function spliceNullColum() {//去除空列
+        let tempArr = [];
+        let pointer = 0;
+        for (let i = 0; i < config.blockArr.length; i++) {
+            if (config.blockArr[i].length != 0) { //筛选出空数组列,让后列的left-1;
+                let temp = config.blockArr[i];
+                for (let j = 0, len1 = temp.length; j < len1; j++) {
+                    temp[j].left = pointer;
+                }
+                tempArr.push(temp);
+                pointer++;
+            }
+        }
+
+        config.blockArr = tempArr;
+    }
+
+    function refreshDom() {
+        for (let i = 0, len = config.blockArr.length; i < len; i++) {
+            for (let j = 0, len1 = config.blockArr[i].length; j < len1; j++) {
+                setTyle(config.blockArr[i][j])
+            }
+        }
+    };
+
+    function showScore(arr) {
+        //制定一个规则: 分数 = 消除星星个数的平方*5
+        config.selectedScore = Math.pow(arr.length, 2) * 5; //为了点击后获取该数据,把该数据保存起来
+        config.blockNum.innerText = arr.length;
+        config.slectedScore.innerText = config.selectedScore;
+    }
+    function changeStyle(arr) {
+
+        for (let i = 0, len = arr.length; i < len; i++) {
+            arr[i].style.borderWidth = '3px';
+            let num = 0;// 这里一定用let封闭作用域
+            arr[i].timer = setInterval(() => {
+                arr[i].style.transform = `scale(${0.98 + Math.pow(-1, num) * 0.02})`;
+                num++
+            }, 300)
+        }
+    }
+    function goBack(arr) {
+        for (let i = 0, len = arr.length; i < len; i++) {
+            clearInterval(arr[i].timer)
+            arr[i].style.borderWidth = '0px'
+            arr[i].style.transform = "scale(0.95)";
+        }
+    }
+
+    function setTyle(block) {
+        block.style.transition = 'all .5s';
+        block.style.left = block.left * config.blockWidth + 'px';
+        block.style.bottom = block.bottom * config.blockHeight + 'px';
+        block.style.backgroundImage = `url(${config.colorSet[block.num]})`
+    }
+</script>
+
+</html>
